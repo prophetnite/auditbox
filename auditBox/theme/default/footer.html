@@ -1,0 +1,59 @@
+
+            </div>
+    </section>
+    <!-- End main content-->
+
+</div>
+<!-- End wrapper-->
+
+<!-- Vendor scripts -->
+<script src="vendor/pacejs/pace.min.js"></script>
+<script src="vendor/jquery/dist/jquery.min.js"></script>
+<script src="vendor/bootstrap/js/bootstrap.min.js"></script>
+<script src="vendor/toastr/toastr.min.js"></script>
+<script src="vendor/sparkline/index.js"></script>
+<script src="vendor/flot/jquery.flot.min.js"></script>
+<script src="vendor/flot/jquery.flot.resize.min.js"></script>
+<script src="vendor/flot/jquery.flot.spline.js"></script>
+
+<!-- App scripts -->
+<script src="scripts/luna.js"></script>
+
+<script>
+    $(document).ready(function () {
+      if(typeof alertQueue !== undefined){
+        for(var i = 0, j = alertQueue.length; i < j; i++){
+          var type = alertQueue[i].type;
+          var msg = alertQueue[i].msg;
+          setTimeout(function(){
+              toastr.options = {
+                  "positionClass": "toast-top-right",
+                  "closeButton": true,
+                  "progressBar": true,
+                  "showEasing": "swing",
+                  "timeOut": "6000"
+              };
+              toastr[type](msg);
+          }, 1600);
+        }
+      }
+        /* setTimeout(function(){
+            toastr.options = {
+                "positionClass": "toast-top-right",
+                "closeButton": true,
+                "progressBar": true,
+                "showEasing": "swing",
+                "timeOut": "6000"
+            };
+            toastr.warning('<strong>Welcome to PassPoint v.1.1</strong> <br/><small>Windows Credential Auditing</small>');
+        },1600)*/
+
+
+    });
+</script>
+
+</body>
+
+<?php $this->sqlEngine->disconnect(); ?>
+
+</html>
