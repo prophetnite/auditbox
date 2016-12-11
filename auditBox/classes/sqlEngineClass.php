@@ -10,6 +10,89 @@ class sqlEngineClass{
     protected $sql;
     protected $connected = false;
 
+    // query data //
+    protected $getReportMetaQuery = [
+      'sql' => "SELECT `id`, `task_id`, `report_date`
+                FROM `reports`
+                WHERE `job_owner` = ?
+                ORDER BY `report_date` DESC",
+      'paramTypes' => 'i'
+    ];
+
+    protected $getUserByHashQuery = [
+      'sql' => "SELECT `clients`.`id`, `app_key`, `first_name`, `last_name`, `business_name`, `email`, `avatar`, `max_devices`, `device_labels`
+                FROM `clients` LEFT JOIN `client_meta` ON `clients`.`id` = `client_meta`.`id`
+                WHERE `clients`.`auth_hash` = ? LIMIT 1",
+      'paramTypes' => 's'
+    ];
+
+    protected $getClientDevicesQuery = [
+      'sql' => "SELECT `id`, `target_id`, `device_label`, `avail_configs`
+                FROM `client_devices`
+                WHERE `owner_id` = ?",
+      'paramTypes' => 'i'
+    ];
+
+    protected $getClientJobsQuery = [
+      'sql' => "SELECT `id`, `label`, `task_id`, `last_run`, `next_run`, `run_interval`, `run_once`
+                FROM `jobs`
+                WHERE `job_owner` = ?",
+      'paramTypes' => 'i'
+    ];
+
+    protected $saveClientJobQuery = [
+      'sql' => "INSERT INTO `jobs` (`id`, `label`, `task_id`, `job_owner`, `last_run`, `next_run`, `run_interval`, `run_once`)
+                VALUES (NULL, ?, ?, ?, NOW(), ADDTIME(NOW(), '00:10:00'), ?, '0')",
+      'paramTypes' => 'ssis'
+    ];
+
+    protected $removeJobQuery = [
+      'sql' => "DELETE FROM `jobs` WHERE `job_owner` = ? AND `id` = ?",
+      'paramTypes' => 'ii'
+    ];
+
+    protected $storeJobReportQuery = [
+      'sql' => "INSERT INTO `reports` (`id`, `job_owner`, `task_id`, `report_date`, `gzipped`, `path`)
+                VALUES (NULL, ?, ?, NOW(), '0', ?)",
+      'paramTypes' => 'iss'
+    ];
+
+    protected $storeNewDeviceQuery = [
+      'sql' => "INSERT INTO `client_devices` (`id`, `owner_id`, `target_id`, `device_label`, `avail_configs`)
+                VALUES (NULL, ?, ?, ?, ?)",
+      'paramTypes' => 'isss'
+    ];
+
+    protected $getUserIdByAppKeyQuery = [
+      'sql' => "SELECT `id` FROM `clients` WHERE `app_key` = ?",
+      'paramTypes' => 's'
+    ];
+
+    protected $getNearestJobsQuery = [
+      'sql' => "SELECT `id`, `task_id`
+                FROM `jobs`
+                WHERE `job_owner` = ? AND `next_run` > NOW() AND `next_run` < ADDTIME(NOW(), '00:10:00')
+                ORDER BY `next_run`",
+      'paramTypes' => 'i'
+    ];
+
+    protected $getReportByIdQuery = [
+      'sql' => "SELECT `id`, `seen`, `task_id`, `report_date`, `path`
+                FROM `reports`
+                WHERE `job_owner` = ?
+                AND `id` = ?
+                LIMIT 1",
+      'paramTypes' => 'ii'
+    ];
+
+    protected $incJobNextRunQuery = [
+      'sql' => "UPDATE `jobs`
+                SET `next_run` = ADDTIME(NOW(), `run_interval`),
+                `last_run` = NOW()
+                WHERE `id` = ?",
+      'paramTypes' => 'i'
+    ];
+
     protected function connect(){
         $this->sql = new mysqli(
             $this->serverPath,
@@ -45,321 +128,218 @@ class sqlEngineClass{
       return $result;
     }
 
+    protected function runSql($query, $input){
+      if (!$this->connected) $this->connect();
+
+      $state = $this->sql->stmt_init();
+
+      $state = $this->sql->prepare($query['sql']);
+      if (!$state) die('Could not prepare sql');
+
+      if($input){
+        $bind = array();
+        foreach($input as $key => $val){
+          $bind[$key] = &$input[$key];
+        }
+
+        array_unshift($bind, $query['paramTypes']);
+        call_user_func_array(array($state, 'bind_param'), $bind);
+      }
+
+      if(!$state->execute()) die('Could not execute sql');
+
+      $state->store_result();
+
+      $variables = array();
+      $data = array();
+      $meta = $state->result_metadata();
+
+      if(!$meta) return true;
+
+      while($field = $meta->fetch_field())
+        $variables[] = &$data[$field->name];
+
+      call_user_func_array(array($state, 'bind_result'), $variables);
+
+      $returnArray = array();
+      $i = 0;
+      while($state->fetch()){
+        $returnArray[$i] = array();
+
+        foreach($data as $k=>$v)
+          $returnArray[$i][$k] = $v;
+
+        $i++;
+      }
+
+      return $returnArray;
+    }
+
     public function getUserByHash($hash){
-        if (!$this->connected) $this->connect();
-        $state = $this->sql->stmt_init();
-        $isPrepared = $state->prepare(
-            "SELECT `clients`.`id`, `app_key`, `first_name`, `last_name`, `business_name`, `email`, `avatar`, `max_devices`, `device_labels`
-            FROM `clients` LEFT JOIN `client_meta` ON `clients`.`id` = `client_meta`.`id`
-            WHERE `clients`.`auth_hash` = ? LIMIT 1"
-        );
-        if (!$isPrepared) die('Could not prepare sql');
-        if (!$state) die('Could not prepare sql');
+      $results = $this->runSql(
+        $this->getUserByHashQuery,
+        ['authHash' => $hash]
+      );
 
-        $state->bind_param('s', $authHash);
-        $authHash = $hash;
+      if(!count($results)) return false;
 
-        if (!$state->execute()) die('Could not execute sql');
-        $data = ['id' => '', 'app_key' => '', 'first_name' => '', 'last_name' => '', 'business_name' => '', 'email' => '', 'avatar' => '', 'max_devices' => '', 'device_labels' => ''];
-        $state->bind_result($data['id'], $data['app_key'], $data['first_name'], $data['last_name'], $data['business_name'], $data['email'], $data['avatar'], $data['max_devices'], $data['device_labels']);
-        $state->fetch();
-        $state->close();
-
-        if(empty($data['id'])) return false;
-
-        return $data;
+      return $results[0];
     }
 
     public function getClientDevices($cid){
-        if (!$this->connected) $this->connect();
-        $state = $this->sql->stmt_init();
-        $state = $this->sql->prepare(
-            "SELECT `id`, `target_id`, `device_label`, `avail_configs`
-            FROM `client_devices`
-            WHERE `owner_id` = ?"
-        );
-        if (!$state) die('Could not prepare sql');
+      $results = $this->runSql(
+        $this->getClientDevicesQuery,
+        ['clientId' => $cid]
+      );
 
-        $state->bind_param('i', $id);
-        $id = $cid;
+      if(!count($results)) return false;
 
-        if (!$state->execute()) die('Could not execute sql');
-
-        $returnArray = [];
-        $hasNext = NULL;
-        $data = ['id' => '', 'target_id' => '', 'device_label' => '', 'avail_configs' => ''];
-        $state->bind_result($data['id'], $data['target_id'], $data['device_label'], $data['avail_configs']);
-        $state->fetch();
-
-        do{
-            if(!empty($data['id'])) array_push($returnArray, $this->arrayClone($data));
-        }while($state->fetch());
-
-        $state->close();
-
-        if(!count($returnArray)) return false;
-
-        return $returnArray;
+      return $results;
     }
 
     public function getClientJobs($cid){
-        if (!$this->connected) $this->connect();
-        $state = $this->sql->stmt_init();
+      $results = $this->runSql(
+        $this->getClientJobsQuery,
+        ['clientId' => $cid]
+      );
 
-        $state = $this->sql->prepare(
-            "SELECT `id`, `label`, `task_id`, `last_run`, `next_run`, `run_interval`, `run_once`
-            FROM `jobs`
-            WHERE `job_owner` = ?"
-        );
-        if (!$state) die('Could not prepare sql');
+      if(!count($results)) return false;
 
-        $state->bind_param('i', $id);
-        $id = $cid;
-
-        if (!$state->execute()) die('Could not execute sql');
-
-        $returnArray = [];
-        $data = ['id' => '', 'label' => '', 'task_id' => '', 'last_run' => '', 'next_run' => '', 'run_interval' => '', 'run_once' => ''];
-        $state->bind_result($data['id'], $data['label'], $data['task_id'], $data['last_run'], $data['next_run'], $data['run_interval'], $data['run_once']);
-        $state->fetch();
-
-        do{
-          if(!empty($data['id'])) array_push($returnArray, $this->arrayClone($data));
-        }while($state->fetch());
-
-        $state->close();
-
-        if(!count($returnArray)) return false;
-
-        return $returnArray;
+      return $results;
     }
 
-    public function saveClientJob($jlbl, $tskid, $cid, $runint){
-        if (!$this->connected) $this->connect();
-        $state = $this->sql->stmt_init();
+    public function saveClientJob($jlbl, $tid, $cid, $runint){
+      if(!$this->connected) $this->connect();
+      $tid = $this->sql->escape_string($tid);
+      $runint = $this->sql->escape_string($runint);
 
-        $state = $this->sql->prepare(
-            "INSERT INTO `jobs` (`id`, `label`, `task_id`, `job_owner`, `last_run`, `next_run`, `run_interval`, `run_once`)
-            VALUES (NULL, ?, ?, ?, NOW(), ADDTIME(NOW(), '00:10:00'), ?, '0')"
-        );
-        if (!$state) die('Could not prepare sql');
+      $results = $this->runSql(
+        $this->saveClientJobQuery,
+        [
+          'jobLabel' => $jlbl,
+          'targetId' => $tid,
+          'clientId' => $cid,
+          'runInterval' => $runint,
+        ]
+      );
 
-        $state->bind_param('ssis', $jobLabel, $taskId, $clientId, $runInterval);
-        $jobLabel = $jlbl;
-        $clientId = $cid;
-        $taskId = $this->sql->escape_string($tskid);
-        $runInterval = $this->sql->escape_string($runint);
-
-        if (!$state->execute()) die('Could not execute sql');
-
-        $state->close();
-
-        return true;
+      return $results;
     }
 
     public function removeJob($cid, $jid){
-        if (!$this->connected) $this->connect();
-        $state = $this->sql->stmt_init();
+      if(!$this->connected) $this->connect();
+      $jid = $this->sql->escape_string($jid);
 
-        $state = $this->sql->prepare(
-            "DELETE FROM `jobs` WHERE `job_owner` = ? AND `id` = ?"
-        );
-        if (!$state) die('Could not prepare sql');
+      $results = $this->runSql(
+        $this->removeJobQuery,
+        [
+          'clientId' => $cid,
+          'taskId' => $jid
+        ]
+      );
 
-        $state->bind_param('ii', $clientId, $jobId);
-        $clientId = $cid;
-        $jobId = $this->sql->escape_string($jid);
-
-        if (!$state->execute()) die('Could not execute sql');
-
-        $state->close();
-
-        return true;
+      return $results;
     }
 
     // api save report function //
-    public function storeJobReport($cid, $tid, $loc){
-        if (!$this->connected) $this->connect();
-        $state = $this->sql->stmt_init();
+    public function storeJobReport($cid, $tskid, $loc){
+      if(!$this->connected) $this->connect();
+      $tskid = $this->sql->escape_string($tskid);
+      $loc = $this->sql->escape_string($loc);
 
-        $state = $this->sql->prepare(
-            "INSERT INTO `reports` (`id`, `job_owner`, `task_id`, `report_date`, `gzipped`, `path`)
-            VALUES (NULL, ?, ?, NOW(), '0', ?)"
-        );
-        if(!$state) die('Could not prepare sql');
+      $results = $this->runSql(
+        $this->storeJobReportQuery,
+        [
+          'clientId' => $cid,
+          'taskId' => $tskid,
+          'path' => $loc,
+        ]
+      );
 
-        $state->bind_param('iss', $id, $taskId, $reportPath);
-        $id = $cid;
-        $taskId = $this->sql->escape_string($tid);
-        $reportPath = $this->sql->escape_string($loc);
-
-        if(!$state->execute()) die('Could not execute sql');
-
-        $state->close();
-
-        return true;
+      return $results;
     }
 
-    public function storeNewDevice($oid, $tid, $delabel, $aconfs){
-        if (!$this->connected) $this->connect();
-        $state = $this->sql->stmt_init();
+    public function storeNewDevice($cid, $tid, $delabel, $aconfs){
+      if(!$this->connected) $this->connect();
+      $tid = $this->sql->escape_string($tid);
+      $delabel = $this->sql->escape_string($delabel);
+      $aconfs = $this->sql->escape_string($aconfs);
 
-        $state = $this->sql->prepare(
-            "INSERT INTO `client_devices` (`id`, `owner_id`, `target_id`, `device_label`, `avail_configs`)
-      VALUES (NULL, ?, ?, ?, ?)"
-        );
-        if (!$state) die('Could not prepare sql');
+      $results = $this->runSql(
+        $this->storeNewDeviceQuery,
+        [
+          'clientId' => $cid,
+          'targetId' => $tid,
+          'deviceLabel' => $delabel,
+          'availConfigs' => $aconfs,
+        ]
+      );
 
-        $state->bind_param('isss', $id, $targetId, $deviceLabel, $availConfigs);
-        $id = $oid;
-        $targetId = $this->sql->escape_string($tid);
-        $deviceLabel = $this->sql->escape_string($delabel);
-        $availConfigs = $this->sql->escape_string($aconfs);
-
-        if (!$state->execute()) die('Could not execute sql');
-
-        $state->close();
-
-        return true;
+      return $results;
     }
 
     public function getUserIdByAppKey($key){
-        if (!$this->connected) $this->connect();
-        $state = $this->sql->stmt_init();
+      if(!$this->connected) $this->connect();
+      $key = $this->sql->escape_string($key);
 
-        $state = $this->sql->prepare(
-            "SELECT `id` FROM `clients` WHERE `app_key` = ?"
-        );
-        if (!$state) die('Could not prepare sql');
+      $results = $this->runSql(
+        $this->getUserIdByAppKeyQuery,
+        ['appKey' => $key]
+      );
 
-        $state->bind_param('s', $appKey);
-        $appKey = $this->sql->escape_string($key);
+      if(!count($results)) return false;
 
-        if (!$state->execute()) die('Could not execute sql');
-
-        $data = ['id' => ''];
-        $state->bind_result($data['id']);
-        $state->fetch();
-        $state->close();
-
-        if (empty($data['id'])) return false;
-
-        return $data;
+      return $results[0];
     }
 
     public function getReportMeta($cid){
-        if (!$this->connected) $this->connect();
-        $state = $this->sql->stmt_init();
-        $state = $this->sql->prepare(
-            "SELECT `id`, `task_id`, `report_date`
-            FROM `reports`
-            WHERE `job_owner` = ?
-            ORDER BY `report_date` DESC"
-        );
-        if (!$state) die('Could not prepare sql');
+      $results = $this->runSql(
+        $this->getReportMetaQuery,
+        ['clientId' => $cid]
+      );
 
-        $state->bind_param('i', $clientId);
-        $clientId = $cid;
+      if(!count($results)) return false;
 
-        if (!$state->execute()) die('Could not execute sql');
-
-        $returnArray = [];
-        $data = ['id' => '', 'report_date' => '', 'task_id' => ''];
-        $state->bind_result($data['id'], $data['task_id'], $data['report_date']);
-        $state->fetch();
-
-        do{
-            if(!empty($data['id'])) array_push($returnArray, $this->arrayClone($data));
-        }while($state->fetch());
-
-        $state->close();
-
-        if(!count($returnArray)) return false;
-
-        return $returnArray;
+      return $results;
     }
 
     public function getReportById($cid, $rid){
-        if (!$this->connected) $this->connect();
-        $state = $this->sql->stmt_init();
+      if(!$this->connected) $this->connect();
+      $cid = $this->sql->escape_string($cid);
+      $rid = $this->sql->escape_string($rid);
 
-        $state = $this->sql->prepare(
-            "SELECT `id`, `seen`, `task_id`, `report_date`, `path`
-            FROM `reports`
-            WHERE `job_owner` = ?
-            AND `id` = ?
-            LIMIT 1"
-        );
-        if (!$state) die('Could not prepare sql');
+      $results = $this->runSql(
+        $this->getReportByIdQuery,
+        [
+          'clientId' => $cid,
+          'reportId' => $rid
+        ]
+      );
 
-        $state->bind_param('ii', $clientId, $reportId);
-        $clientId = $this->sql->escape_string($cid);
-        $reportId = $this->sql->escape_string($rid);
+      if(!count($results)) return false;
 
-        if (!$state->execute()) die('Could not execute sql');
-        $data = ['id' => '', 'seen' => '', 'task_id' => '', 'report_date' => '', 'path' => ''];
-        $state->bind_result($data['id'], $data['seen'], $data['task_id'], $data['report_date'], $data['path']);
-        $state->fetch();
-        $state->close();
-
-        if(empty($data)) return false;
-
-        return $data;
+      return $results[0];
     }
 
     // gets impending jobs //
     public function getNearestJobs($cid){
-        if (!$this->connected) $this->connect();
-        $state = $this->sql->stmt_init();
+      $results = $this->runSql(
+        $this->getNearestJobsQuery,
+        ['clientId' => $cid]
+      );
 
-        $state = $this->sql->prepare(
-            "SELECT `id`, `task_id`
-            FROM `jobs`
-            WHERE `job_owner` = ? AND `next_run` > NOW() AND `next_run` < ADDTIME(NOW(), '00:10:00')
-            ORDER BY `next_run`
-            LIMIT 1"
-        );
-        if (!$state) die('Could not prepare sql');
+      if(!count($results)) return false;
 
-        $state->bind_param('i', $jobOwner);
-        $jobOwner = $cid;
-
-        if (!$state->execute()) die('Could not execute sql');
-
-        $returnArray = [];
-        $data = ['id' => '', 'report_date' => '', 'task_id' => ''];
-        $state->bind_result($data['id'], $data['task_id'], $data['report_date']);
-        $state->fetch();
-
-        do{
-            if(!empty($data['id'])) array_push($returnArray, $this->arrayClone($data));
-        }while($state->fetch());
-
-        $state->close();
-
-        if(!count($returnArray)) return false;
-
-        return $returnArray;
+      return $results;
     }
 
     public function incJobNextRun($jid){
-        if (!$this->connected) $this->connect();
-        $state = $this->sql->stmt_init();
+      $results = $this->runSql(
+        $this->incJobNextRunQuery,
+        ['jobId' => $jid]
+      );
 
-        $state = $this->sql->prepare(
-            "UPDATE `jobs`
-      SET `next_run` = ADDTIME(NOW(), `run_interval`),
-      `last_run` = NOW()
-      WHERE `id` = ?"
-        );
-        if (!$state) die('Could not prepare sql');
-
-        $state->bind_param('i', $id);
-        $id = $jid;
-
-        if (!$state->execute()) die('Could not execute sql');
-
-        return true;
+      return $results;
     }
 }
 
