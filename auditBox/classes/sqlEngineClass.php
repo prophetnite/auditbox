@@ -50,7 +50,7 @@ class sqlEngineClass{
         $state->fetch();
         $state->close();
 
-        if (empty($data['id'])) return false;
+        if(empty($data['id'])) return false;
 
         return $data;
     }
@@ -71,6 +71,7 @@ class sqlEngineClass{
         if (!$state->execute()) die('Could not execute sql');
         $array = [];
         $hasNext = NULL;
+        // this form of loop appends empty data, needs repairing //
         do {
             $data = ['id' => '', 'target_id' => '', 'device_label' => '', 'avail_configs' => ''];
             $state->bind_result($data['id'], $data['target_id'], $data['device_label'], $data['avail_configs']);
@@ -101,6 +102,7 @@ class sqlEngineClass{
 
         $array = [];
         $hasNext = NULL;
+        // this form of loop appends empty data, needs repairing //
         do {
             $data = ['id' => '', 'label' => '', 'task_id' => '', 'last_run' => '', 'next_run' => '', 'run_interval' => '', 'run_once' => ''];
             $state->bind_result($data['id'], $data['label'], $data['task_id'], $data['last_run'], $data['next_run'], $data['run_interval'], $data['run_once']);
@@ -157,22 +159,22 @@ class sqlEngineClass{
     }
 
     // api save report function //
-    public function storeJobReport($cid, $tid, $data){
+    public function storeJobReport($cid, $tid, $loc){
         if (!$this->connected) $this->connect();
         $state = $this->sql->stmt_init();
 
         $state = $this->sql->prepare(
-            "INSERT INTO `reports` (`id`, `job_owner`, `task_id`, `report_date`, `gzipped`, `data`)
-      VALUES (NULL, ?, ?, NOW(), '0', ?)"
+            "INSERT INTO `reports` (`id`, `job_owner`, `task_id`, `report_date`, `gzipped`, `path`)
+            VALUES (NULL, ?, ?, NOW(), '0', ?)"
         );
-        if (!$state) die('Could not prepare sql');
+        if(!$state) die('Could not prepare sql');
 
-        $state->bind_param('iss', $id, $taskId, $reportData);
+        $state->bind_param('iss', $id, $taskId, $reportPath);
         $id = $cid;
         $taskId = $this->sql->escape_string($tid);
-        $reportData = $this->sql->escape_string($data);
+        $reportPath = $this->sql->escape_string($loc);
 
-        if (!$state->execute()) die('Could not execute sql');
+        if(!$state->execute()) die('Could not execute sql');
 
         $state->close();
 
@@ -245,6 +247,7 @@ class sqlEngineClass{
 
         $array = [];
         $hasNext = NULL;
+        // this form of loop appends empty data, needs repairing //
         do {
             $data = ['id' => '', 'report_date' => '', 'task_id' => ''];
             $state->bind_result($data['id'], $data['task_id'], $data['report_date']);
@@ -252,7 +255,7 @@ class sqlEngineClass{
         } while ($hasNext = $state->fetch());
         $state->close();
 
-        if(!count($array)) return false;
+        if(!count($array) || empty($array[0]['id'])) return false;
 
         return $array;
     }
@@ -262,7 +265,7 @@ class sqlEngineClass{
         $state = $this->sql->stmt_init();
 
         $state = $this->sql->prepare(
-            "SELECT `id`, `seen`, `task_id`, `report_date`, `data`
+            "SELECT `id`, `seen`, `task_id`, `report_date`, `path`
             FROM `reports`
             WHERE `job_owner` = ?
             AND `id` = ?
@@ -275,8 +278,8 @@ class sqlEngineClass{
         $reportId = $this->sql->escape_string($rid);
 
         if (!$state->execute()) die('Could not execute sql');
-        $data = ['id' => '', 'seen' => '', 'task_id' => '', 'report_date' => '', 'data' => ''];
-        $state->bind_result($data['id'], $data['seen'], $data['task_id'], $data['report_date'], $data['data']);
+        $data = ['id' => '', 'seen' => '', 'task_id' => '', 'report_date' => '', 'path' => ''];
+        $state->bind_result($data['id'], $data['seen'], $data['task_id'], $data['report_date'], $data['path']);
         $state->fetch();
         $state->close();
 
@@ -306,6 +309,7 @@ class sqlEngineClass{
 
         $array = [];
         $hasNext = NULL;
+        // this form of loop appends empty data, needs repairing //
         do {
             $data = ['id' => '', 'report_date' => '', 'task_id' => ''];
             $state->bind_result($data['id'], $data['task_id'], $data['report_date']);

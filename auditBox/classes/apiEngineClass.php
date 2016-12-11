@@ -39,8 +39,27 @@ class apiEngineClass{
   }
 
   public function storeReport($clientId, $taskId, $data){
-    // pre-parsing, if needed, goes here //
-    return $this->sqlEngine->storeJobReport($clientId, $taskId, $data);
+    $year = date('Y');
+    $month = date('m');
+    $day = date('d');
+
+    $logPath = "../scanlogs/$year/$month/$day/";
+    $logFilename = $taskId;
+
+    if(!file_exists("../scanlogs/$year/$month/$day"))
+      mkdir("../scanlogs/$year/$month/$day", 0777, true)
+        or die($this->buildError('100', 'log_directory_creation'));
+
+    $logHandle = fopen($logPath . '/' . $logFilename, "w")
+      or die($this->buildError('101', 'log_file_creation'));
+
+    $xml = simplexml_load_string($data);
+    $data = json_encode($xml);
+
+    fwrite($logHandle, $data);
+    fclose($logHandle);
+
+    return $this->sqlEngine->storeJobReport($clientId, $taskId, "scanlogs/$year/$month/$day/$logFilename");
   }
 
   public function storeNewDevice($ownerId, $targetId, $deviceLabel, $availConfigs){
