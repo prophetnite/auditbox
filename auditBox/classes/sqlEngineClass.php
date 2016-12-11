@@ -1,7 +1,6 @@
 <?php
 
-class sqlEngineClass
-{
+class sqlEngineClass{
     // sql config //
     protected $serverPath = 'localhost';
     protected $username = 'root';
@@ -10,8 +9,7 @@ class sqlEngineClass
     protected $sql;
     protected $connected = false;
 
-    protected function connect()
-    {
+    protected function connect(){
         $this->sql = new mysqli(
             $this->serverPath,
             $this->username,
@@ -25,22 +23,20 @@ class sqlEngineClass
         $this->connected = true;
     }
 
-    public function disconnect()
-    {
+    public function disconnect(){
         if (!$this->connected) return;
 
         $this->connected = false;
         $this->sql->close();
     }
 
-    public function getUserByHash($hash)
-    {
+    public function getUserByHash($hash){
         if (!$this->connected) $this->connect();
         $state = $this->sql->stmt_init();
         $isPrepared = $state->prepare(
             "SELECT `clients`.`id`, `app_key`, `first_name`, `last_name`, `business_name`, `email`, `avatar`, `max_devices`, `device_labels`
-      FROM `clients` LEFT JOIN `client_meta` ON `clients`.`id` = `client_meta`.`id`
-      WHERE `clients`.`auth_hash` = ? LIMIT 1"
+            FROM `clients` LEFT JOIN `client_meta` ON `clients`.`id` = `client_meta`.`id`
+            WHERE `clients`.`auth_hash` = ? LIMIT 1"
         );
         if (!$isPrepared) die('Could not prepare sql');
         if (!$state) die('Could not prepare sql');
@@ -59,14 +55,13 @@ class sqlEngineClass
         return $data;
     }
 
-    public function getClientDevices($cid)
-    {
+    public function getClientDevices($cid){
         if (!$this->connected) $this->connect();
         $state = $this->sql->stmt_init();
         $state = $this->sql->prepare(
             "SELECT `id`, `target_id`, `device_label`, `avail_configs`
-      FROM `client_devices`
-      WHERE `owner_id` = ?"
+            FROM `client_devices`
+            WHERE `owner_id` = ?"
         );
         if (!$state) die('Could not prepare sql');
 
@@ -83,20 +78,19 @@ class sqlEngineClass
         } while ($hasNext = $state->fetch());
         $state->close();
 
-        if ($hasNext == false) return false;
+        if(!count($array)) return false;
 
         return $array;
     }
 
-    public function getClientJobs($cid)
-    {
+    public function getClientJobs($cid){
         if (!$this->connected) $this->connect();
         $state = $this->sql->stmt_init();
 
         $state = $this->sql->prepare(
             "SELECT `id`, `label`, `task_id`, `last_run`, `next_run`, `run_interval`, `run_once`
-      FROM `jobs`
-      WHERE `job_owner` = ?"
+            FROM `jobs`
+            WHERE `job_owner` = ?"
         );
         if (!$state) die('Could not prepare sql');
 
@@ -114,19 +108,18 @@ class sqlEngineClass
         } while ($hasNext = $state->fetch());
         $state->close();
 
-        if ($hasNext == false) return false;
+        if(!count($array)) return false;
 
         return $array;
     }
 
-    public function saveClientJob($jlbl, $tskid, $cid, $runint)
-    {
+    public function saveClientJob($jlbl, $tskid, $cid, $runint){
         if (!$this->connected) $this->connect();
         $state = $this->sql->stmt_init();
 
         $state = $this->sql->prepare(
             "INSERT INTO `jobs` (`id`, `label`, `task_id`, `job_owner`, `last_run`, `next_run`, `run_interval`, `run_once`)
-      VALUES (NULL, ?, ?, ?, NOW(), ADDTIME(NOW(), '00:10:00'), ?, '0')"
+            VALUES (NULL, ?, ?, ?, NOW(), ADDTIME(NOW(), '00:10:00'), ?, '0')"
         );
         if (!$state) die('Could not prepare sql');
 
@@ -143,8 +136,7 @@ class sqlEngineClass
         return true;
     }
 
-    public function removeJob($cid, $jid)
-    {
+    public function removeJob($cid, $jid){
         if (!$this->connected) $this->connect();
         $state = $this->sql->stmt_init();
 
@@ -165,8 +157,7 @@ class sqlEngineClass
     }
 
     // api save report function //
-    public function storeJobReport($cid, $tid, $data)
-    {
+    public function storeJobReport($cid, $tid, $data){
         if (!$this->connected) $this->connect();
         $state = $this->sql->stmt_init();
 
@@ -188,8 +179,7 @@ class sqlEngineClass
         return true;
     }
 
-    public function storeNewDevice($oid, $tid, $delabel, $aconfs)
-    {
+    public function storeNewDevice($oid, $tid, $delabel, $aconfs){
         if (!$this->connected) $this->connect();
         $state = $this->sql->stmt_init();
 
@@ -212,8 +202,7 @@ class sqlEngineClass
         return true;
     }
 
-    public function getUserIdByAppKey($key)
-    {
+    public function getUserIdByAppKey($key){
         if (!$this->connected) $this->connect();
         $state = $this->sql->stmt_init();
 
@@ -227,8 +216,9 @@ class sqlEngineClass
 
         if (!$state->execute()) die('Could not execute sql');
 
-        $state->bind_result();
-        $res->fetch();
+        $data = ['id' => ''];
+        $state->bind_result($data['id']);
+        $state->fetch();
         $state->close();
 
         if (empty($data['id'])) return false;
@@ -236,16 +226,15 @@ class sqlEngineClass
         return $data;
     }
 
-    public function getReportMeta($cid)
-    {
+    public function getReportMeta($cid){
         if (!$this->connected) $this->connect();
         $state = $this->sql->stmt_init();
 
         $state = $this->sql->prepare(
             "SELECT `id`, `task_id`, `report_date`
-      FROM `reports`
-      WHERE `job_owner` = ?
-      ORDER BY `report_date` DESC"
+            FROM `reports`
+            WHERE `job_owner` = ?
+            ORDER BY `report_date` DESC"
         );
         if (!$state) die('Could not prepare sql');
 
@@ -263,22 +252,21 @@ class sqlEngineClass
         } while ($hasNext = $state->fetch());
         $state->close();
 
-        if ($hasNext == false) return false;
+        if(!count($array)) return false;
 
         return $array;
     }
 
-    public function getReportById($cid, $rid)
-    {
+    public function getReportById($cid, $rid){
         if (!$this->connected) $this->connect();
         $state = $this->sql->stmt_init();
 
         $state = $this->sql->prepare(
-            "SELECT *
-      FROM `reports`
-      WHERE `job_owner` = ?
-      AND `id` = ?
-      LIMIT 1"
+            "SELECT `id`, `seen`, `task_id`, `report_date`, `data`
+            FROM `reports`
+            WHERE `job_owner` = ?
+            AND `id` = ?
+            LIMIT 1"
         );
         if (!$state) die('Could not prepare sql');
 
@@ -287,19 +275,18 @@ class sqlEngineClass
         $reportId = $this->sql->escape_string($rid);
 
         if (!$state->execute()) die('Could not execute sql');
-        $data = '';
-        $state->bind_result($data);
+        $data = ['id' => '', 'seen' => '', 'task_id' => '', 'report_date' => '', 'data' => ''];
+        $state->bind_result($data['id'], $data['seen'], $data['task_id'], $data['report_date'], $data['data']);
         $state->fetch();
         $state->close();
 
-        if (empty($data)) return false;
+        if(empty($data)) return false;
 
         return $data;
     }
 
     // gets impending jobs //
-    public function getNearestJobs($cid)
-    {
+    public function getNearestJobs($cid){
         if (!$this->connected) $this->connect();
         $state = $this->sql->stmt_init();
 
