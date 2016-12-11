@@ -80,7 +80,14 @@ $theme->nav();
                                   </tr>
                                   </thead>
                                   <tbody>
-                                    <?php foreach($reportMeta as $report){ ?>
+                                    <?php
+                                    if(!$reportMeta){?>
+                                  <tr>
+                                      <th class="text-nowrap" scope="row">No Reports</th>
+                                  </tr>
+                                    <?php }else{
+                                      foreach($reportMeta as $report){
+                                    ?>
                                   <tr>
                                       <th class="text-nowrap" scope="row"><?php echo $report['task_id']; ?></th>
                                       <td><?php echo $report['report_date']; ?></td>
@@ -91,7 +98,10 @@ $theme->nav();
                                         </a>
                                       </td>
                                   </tr>
-                                  <?php } ?>
+                                  <?php
+                                    }
+                                  }
+                                  ?>
                                   </tbody>
                                 </table>
                               </div>

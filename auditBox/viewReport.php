@@ -25,7 +25,10 @@ $sqlEngine = new sqlEngineClass();
 $userEngine = new userEngineClass(array('sqlEngine' => &$sqlEngine));
 $userEngine->checkLogin();
 
-$reportData = $sqlEngine->getReportById($userEngine->getUser('id'), $_GET['id']);
+$reportMeta = $sqlEngine->getReportById($userEngine->getUser('id'), $_GET['id']);
+
+$reportParser = new reportParserClass(array());
+$reportData = $reportParser->loadReportData('../' . $reportMeta['path']);
 
 $theme = new themeEngineClass(array('sqlEngine' => &$sqlEngine));
 $theme->header();
@@ -65,7 +68,7 @@ $theme->nav();
                           Available Reports
                       </div>
                       <div class="panel-body">
-                          Below are all the reports that are ready
+                          Viewing report saved on: <?php echo $reportMeta['report_date']; ?>
                           <div class="table-responsive">
                               <table class="table table-bordered table-striped">
                                   <thead>
@@ -77,7 +80,9 @@ $theme->nav();
                                   </thead>
                                   <tbody>
                                   <tr>
-                                      <td><?php echo $reportData['data']; ?></td>
+                                      <td>
+                                        <?php print_r($reportData); ?>
+                                      </td>
                                   </tr>
                                   </tbody>
                                 </table>

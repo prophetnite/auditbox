@@ -4,9 +4,7 @@
 <b>All tests use the api key:</b> 6F1ED002AB5595859014EBF0951522D9<br><br>
 
 <h1>New Device Setup Test:</h1>
-<form action="_self" method="post">
-    <input type="hidden" name="k" value="6F1ED002AB5595859014EBF0951522D9">
-    <input type="hidden" name="r" value="10">
+<form action="api.php?k=6F1ED002AB5595859014EBF0951522D9&r=10" method="post">
   Target ID:<br>
   <input type="text" name="target_id" value="8618ee57-27c2-4aaa-95f2-218f503a8398">
   <br>
@@ -22,7 +20,7 @@
 </form>
 
 <h1>Save Report Test:</h1>
-<form action="http://127.0.0.1/api.php?k=6F1ED002AB5595859014EBF0951522D9&r=3" method="post">
+<form action="api.php?k=6F1ED002AB5595859014EBF0951522D9&r=3" method="post">
   Task ID:<br>
   <input type="text" name="task_id" value="c9d0b718-7003-410e-b94b-f1557425c942">
   <br>
