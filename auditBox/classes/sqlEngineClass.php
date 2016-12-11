@@ -2,12 +2,9 @@
 
 class sqlEngineClass{
     // sql config //
-    /*protected $serverPath = 'localhost';
-    protected $username = 'root';
-    protected $password = '2Open4Me269$';*/
     protected $serverPath = 'localhost';
     protected $username = 'root';
-    protected $password = '';
+    protected $password = '2Open4Me269$';
     protected $mainDb = 'auditbox';
     protected $sql;
     protected $connected = false;
