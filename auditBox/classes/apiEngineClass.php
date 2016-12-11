@@ -39,6 +39,11 @@ class apiEngineClass{
   }
 
   public function storeReport($clientId, $taskId, $data){
+    $xml = simplexml_load_string($data);
+    if(!$xml) die($this->buildError('100', 'expected_xml'));
+    $data = json_encode($xml);
+    if(!$data) die($this->buildError('101', 'log_parse_error'));
+
     $year = date('Y');
     $month = date('m');
     $day = date('d');
@@ -48,13 +53,10 @@ class apiEngineClass{
 
     if(!file_exists("../scanlogs/$year/$month/$day"))
       mkdir("../scanlogs/$year/$month/$day", 0777, true)
-        or die($this->buildError('100', 'log_directory_creation'));
+        or die($this->buildError('102', 'log_directory_creation'));
 
     $logHandle = fopen($logPath . '/' . $logFilename, "w")
-      or die($this->buildError('101', 'log_file_creation'));
-
-    $xml = simplexml_load_string($data);
-    $data = json_encode($xml);
+      or die($this->buildError('103', 'log_file_creation'));
 
     fwrite($logHandle, $data);
     fclose($logHandle);

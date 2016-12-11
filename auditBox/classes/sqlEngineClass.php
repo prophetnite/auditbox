@@ -71,11 +71,11 @@ class sqlEngineClass{
         if (!$state->execute()) die('Could not execute sql');
         $array = [];
         $hasNext = NULL;
-        // this form of loop appends empty data, needs repairing //
+
         do {
             $data = ['id' => '', 'target_id' => '', 'device_label' => '', 'avail_configs' => ''];
             $state->bind_result($data['id'], $data['target_id'], $data['device_label'], $data['avail_configs']);
-            array_push($array, $data);
+            if(!empty($data['id'])) array_push($array, $data);
         } while ($hasNext = $state->fetch());
         $state->close();
 
@@ -102,11 +102,11 @@ class sqlEngineClass{
 
         $array = [];
         $hasNext = NULL;
-        // this form of loop appends empty data, needs repairing //
+
         do {
             $data = ['id' => '', 'label' => '', 'task_id' => '', 'last_run' => '', 'next_run' => '', 'run_interval' => '', 'run_once' => ''];
             $state->bind_result($data['id'], $data['label'], $data['task_id'], $data['last_run'], $data['next_run'], $data['run_interval'], $data['run_once']);
-            array_push($array, $data);
+            if(!empty($data['id'])) array_push($array, $data);
         } while ($hasNext = $state->fetch());
         $state->close();
 
@@ -247,15 +247,15 @@ class sqlEngineClass{
 
         $array = [];
         $hasNext = NULL;
-        // this form of loop appends empty data, needs repairing //
+
         do {
             $data = ['id' => '', 'report_date' => '', 'task_id' => ''];
             $state->bind_result($data['id'], $data['task_id'], $data['report_date']);
-            array_push($array, $data);
+            if(!empty($data['id'])) array_push($array, $data);
         } while ($hasNext = $state->fetch());
         $state->close();
 
-        if(!count($array) || empty($array[0]['id'])) return false;
+        if(!count($array)) return false;
 
         return $array;
     }
@@ -309,11 +309,11 @@ class sqlEngineClass{
 
         $array = [];
         $hasNext = NULL;
-        // this form of loop appends empty data, needs repairing //
+
         do {
             $data = ['id' => '', 'report_date' => '', 'task_id' => ''];
             $state->bind_result($data['id'], $data['task_id'], $data['report_date']);
-            array_push($array, $data);
+            if(!empty($data['id'])) array_push($array, $data);
         } while ($hasNext = $state->fetch());
         $state->close();
 
