@@ -5,6 +5,7 @@ class sqlEngineClass{
     protected $serverPath = 'localhost';
     protected $username = 'root';
     protected $password = '2Open4Me269$';
+    //protected $password = '';
     protected $mainDb = 'auditbox';
     protected $sql;
     protected $connected = false;
@@ -28,6 +29,20 @@ class sqlEngineClass{
 
         $this->connected = false;
         $this->sql->close();
+    }
+
+    protected function arrayClone(array $array){
+      $result = array();
+      foreach($array as $key => $val){
+        if(is_array($val)){
+          $result[$key] = $this->arrayClone($val);
+        }elseif(is_object($val)){
+          $result[$key] = clone $val;
+        }else{
+          $result[$key] = $val;
+        }
+      }
+      return $result;
     }
 
     public function getUserByHash($hash){
@@ -69,19 +84,22 @@ class sqlEngineClass{
         $id = $cid;
 
         if (!$state->execute()) die('Could not execute sql');
-        $array = [];
-        $hasNext = NULL;
 
-        do {
-            $data = ['id' => '', 'target_id' => '', 'device_label' => '', 'avail_configs' => ''];
-            $state->bind_result($data['id'], $data['target_id'], $data['device_label'], $data['avail_configs']);
-            if(!empty($data['id'])) array_push($array, $data);
-        } while ($hasNext = $state->fetch());
+        $returnArray = [];
+        $hasNext = NULL;
+        $data = ['id' => '', 'target_id' => '', 'device_label' => '', 'avail_configs' => ''];
+        $state->bind_result($data['id'], $data['target_id'], $data['device_label'], $data['avail_configs']);
+        $state->fetch();
+
+        do{
+            if(!empty($data['id'])) array_push($returnArray, $this->arrayClone($data));
+        }while($state->fetch());
+
         $state->close();
 
-        if(!count($array)) return false;
+        if(!count($returnArray)) return false;
 
-        return $array;
+        return $returnArray;
     }
 
     public function getClientJobs($cid){
@@ -100,19 +118,20 @@ class sqlEngineClass{
 
         if (!$state->execute()) die('Could not execute sql');
 
-        $array = [];
-        $hasNext = NULL;
+        $returnArray = [];
+        $data = ['id' => '', 'label' => '', 'task_id' => '', 'last_run' => '', 'next_run' => '', 'run_interval' => '', 'run_once' => ''];
+        $state->bind_result($data['id'], $data['label'], $data['task_id'], $data['last_run'], $data['next_run'], $data['run_interval'], $data['run_once']);
+        $state->fetch();
 
-        do {
-            $data = ['id' => '', 'label' => '', 'task_id' => '', 'last_run' => '', 'next_run' => '', 'run_interval' => '', 'run_once' => ''];
-            $state->bind_result($data['id'], $data['label'], $data['task_id'], $data['last_run'], $data['next_run'], $data['run_interval'], $data['run_once']);
-            if(!empty($data['id'])) array_push($array, $data);
-        } while ($hasNext = $state->fetch());
+        do{
+          if(!empty($data['id'])) array_push($returnArray, $this->arrayClone($data));
+        }while($state->fetch());
+
         $state->close();
 
-        if(!count($array)) return false;
+        if(!count($returnArray)) return false;
 
-        return $array;
+        return $returnArray;
     }
 
     public function saveClientJob($jlbl, $tskid, $cid, $runint){
@@ -231,7 +250,6 @@ class sqlEngineClass{
     public function getReportMeta($cid){
         if (!$this->connected) $this->connect();
         $state = $this->sql->stmt_init();
-
         $state = $this->sql->prepare(
             "SELECT `id`, `task_id`, `report_date`
             FROM `reports`
@@ -241,23 +259,24 @@ class sqlEngineClass{
         if (!$state) die('Could not prepare sql');
 
         $state->bind_param('i', $clientId);
-        $clientId = $this->sql->escape_string($cid);
+        $clientId = $cid;
 
         if (!$state->execute()) die('Could not execute sql');
 
-        $array = [];
-        $hasNext = NULL;
+        $returnArray = [];
+        $data = ['id' => '', 'report_date' => '', 'task_id' => ''];
+        $state->bind_result($data['id'], $data['task_id'], $data['report_date']);
+        $state->fetch();
 
-        do {
-            $data = ['id' => '', 'report_date' => '', 'task_id' => ''];
-            $state->bind_result($data['id'], $data['task_id'], $data['report_date']);
-            if(!empty($data['id'])) array_push($array, $data);
-        } while ($hasNext = $state->fetch());
+        do{
+            if(!empty($data['id'])) array_push($returnArray, $this->arrayClone($data));
+        }while($state->fetch());
+
         $state->close();
 
-        if(!count($array)) return false;
+        if(!count($returnArray)) return false;
 
-        return $array;
+        return $returnArray;
     }
 
     public function getReportById($cid, $rid){
@@ -295,10 +314,10 @@ class sqlEngineClass{
 
         $state = $this->sql->prepare(
             "SELECT `id`, `task_id`
-      FROM `jobs`
-      WHERE `job_owner` = ? AND `next_run` > NOW() AND `next_run` < ADDTIME(NOW(), '00:10:00')
-      ORDER BY `next_run`
-      LIMIT 1"
+            FROM `jobs`
+            WHERE `job_owner` = ? AND `next_run` > NOW() AND `next_run` < ADDTIME(NOW(), '00:10:00')
+            ORDER BY `next_run`
+            LIMIT 1"
         );
         if (!$state) die('Could not prepare sql');
 
@@ -307,23 +326,23 @@ class sqlEngineClass{
 
         if (!$state->execute()) die('Could not execute sql');
 
-        $array = [];
-        $hasNext = NULL;
+        $returnArray = [];
+        $data = ['id' => '', 'report_date' => '', 'task_id' => ''];
+        $state->bind_result($data['id'], $data['task_id'], $data['report_date']);
+        $state->fetch();
 
-        do {
-            $data = ['id' => '', 'report_date' => '', 'task_id' => ''];
-            $state->bind_result($data['id'], $data['task_id'], $data['report_date']);
-            if(!empty($data['id'])) array_push($array, $data);
-        } while ($hasNext = $state->fetch());
+        do{
+            if(!empty($data['id'])) array_push($returnArray, $this->arrayClone($data));
+        }while($state->fetch());
+
         $state->close();
 
-        if ($hasNext == false) return false;
+        if(!count($returnArray)) return false;
 
-        return $array;
+        return $returnArray;
     }
 
-    public function incJobNextRun($jid)
-    {
+    public function incJobNextRun($jid){
         if (!$this->connected) $this->connect();
         $state = $this->sql->stmt_init();
 

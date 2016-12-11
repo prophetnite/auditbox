@@ -39,9 +39,9 @@ class apiEngineClass{
   }
 
   public function storeReport($clientId, $taskId, $data){
-    $xml = simplexml_load_string($data);
+    $xml = @simplexml_load_string($data);
     if(!$xml) die($this->buildError('100', 'expected_xml'));
-    $data = json_encode($xml);
+    $data = @json_encode($xml);
     if(!$data) die($this->buildError('101', 'log_parse_error'));
 
     $year = date('Y');
