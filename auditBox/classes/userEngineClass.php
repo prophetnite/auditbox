@@ -97,7 +97,7 @@ class userEngineClass{
 
     if(!$clientId) return false;
 
-    return $clientId[0]['id'];
+    return $clientId['id'];
   }
 
   // get upcoming jobs //
