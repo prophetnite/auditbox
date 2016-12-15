@@ -70,6 +70,7 @@ $theme->nav();
                               <table class="table table-bordered table-striped">
                                   <thead>
                                   <tr>
+                                      <th></th>
                                       <th>
                                           Task Label
                                       </th>
@@ -89,7 +90,8 @@ $theme->nav();
                                       foreach($reportMeta as $report){
                                     ?>
                                   <tr>
-                                      <th class="text-nowrap" scope="row"><?php echo $report['task_id']; ?></th>
+                                      <td style="text-align:center;"><input type="checkbox" onclick="" /></td>
+                                      <td class="text-nowrap" scope="row"><?php echo $report['task_id']; ?></th>
                                       <td><?php echo $report['report_date']; ?></td>
                                       <td>
                                         <a href="viewReport.php?id=<?php echo $report['id']; ?>" class="btn btn-w-md btn-success">
@@ -104,6 +106,11 @@ $theme->nav();
                                   ?>
                                   </tbody>
                                 </table>
+                                <br>
+                                <a href="compareReports.php?id=" class="btn btn-w-md btn-success">
+                                  <i class="pe page-header-icon pe-7s-photo-gallery"></i>
+                                  Compare Selected
+                                </a>
                               </div>
                           </div>
                       </div>
