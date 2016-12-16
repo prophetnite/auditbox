@@ -2,7 +2,7 @@
 
 class reportParserClass{
   // class properties //
-
+  public $report;
 
   function __construct(){
     @session_start();
@@ -16,10 +16,24 @@ class reportParserClass{
           $this->{$propName} = $propData;
   }
 
-  public function loadReportData($logPath){
-    $reportData = file_get_contents($logPath);
+  public function loadReport($reportPath){
+    if(!file_exists($reportPath)) return false;
 
-    return json_decode($reportData, TRUE);
+    $this->report = json_decode(file_get_contents($reportPath), TRUE);
+
+    if(!$this->report) return false;
+
+    $this->report = $this->report['report'];
+
+    return true;
+  }
+
+  public function outputRaw(){
+    echo json_encode($this->currentReport);
+  }
+
+  public function outputPretty(){
+
   }
 
 }

@@ -4,8 +4,8 @@ class sqlEngineClass{
     // sql config //
     protected $serverPath = 'localhost';
     protected $username = 'root';
-    protected $password = '2Open4Me269$';
-    //protected $password = '';
+    //protected $password = '2Open4Me269$';
+    protected $password = '';
     protected $mainDb = 'auditbox';
     protected $sql;
     protected $connected = false;
@@ -112,20 +112,6 @@ class sqlEngineClass{
 
         $this->connected = false;
         $this->sql->close();
-    }
-
-    protected function arrayClone(array $array){
-      $result = array();
-      foreach($array as $key => $val){
-        if(is_array($val)){
-          $result[$key] = $this->arrayClone($val);
-        }elseif(is_object($val)){
-          $result[$key] = clone $val;
-        }else{
-          $result[$key] = $val;
-        }
-      }
-      return $result;
     }
 
     protected function runSql($query, $input){
