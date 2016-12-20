@@ -18,6 +18,15 @@ class userEngineClass{
           $this->{$propName} = $propData;
   }
 
+  public function addUser($user, $pass, $firstName, $lastName, $bizName, $email){
+    $authHash = $this->genAuthHash($user, $pass);
+    $newKey = $this->genApiKey();
+    $maxDevices = 5;
+    $deviceLabels = '{"0":"main"}';
+
+    return $this->sqlEngine->storeNewUser($user, $authHash, $firstName, $lastName, $bizName, $email, $newKey, $maxDevices, $deviceLabels);
+  }
+
   public function checkLogin($forceLogin = true){
     // if session not setup or no action for $forcedLogoutSeconds seconds //
     if(
@@ -47,7 +56,7 @@ class userEngineClass{
 
   //  //
   public function attemptLogin($user, $pass){
-    $userData = $this->sqlEngine->getUserByHash($this->authHash($user, $pass));
+    $userData = $this->sqlEngine->getUserByHash($this->genAuthHash($user, $pass));
 
     if(!$userData) return false;
 
@@ -60,8 +69,14 @@ class userEngineClass{
     return true;
   }
 
+  // creates an api key for use in account creation //
+  protected function genApiKey(){
+    $st1 = md5(openssl_random_pseudo_bytes(64));
+    return $st1 . md5(openssl_random_pseudo_bytes(64));
+  }
+
   // creates the authentication hash for supplied user login //
-  protected function authHash($user, $pass){
+  protected function genAuthHash($user, $pass){
     // in-house hashing functions are more secure //
     // this one could be improved //
     $st1 = md5($user . 'simple_salt_is_simple' . $pass);

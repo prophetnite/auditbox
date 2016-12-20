@@ -38,12 +38,14 @@ switch($_GET['r']){
   // NORMAL OPS //
   case '1': // checking if jobs need to be done //
     $jobList = $userEngine->getNearestJobs($ownerId);
+
     if(!$jobList){
       echo '0';
     }else{
       echo '1';
     }
 
+    $apiEngine->storeDeviceCheckin($ownerId);
   break;
   case '2': // pulling job info //
     $jobList = $userEngine->getNearestJobs($ownerId);
@@ -52,8 +54,11 @@ switch($_GET['r']){
   break;
   case '3': // client is submitting a long fucking report >.>" //
     if(empty($_POST) || empty($_POST['report'])) die($apiEngine->buildError('5', 'no_report'));
+
     if(empty($_POST['task_id'])) die($apiEngine->buildError('5', 'no_task_id'));
+
     $res = $apiEngine->storeReport($ownerId, $_POST['task_id'], $_POST['report']);
+
     if(!$res) die($apiEngine->buildError('666', 'unknown_error'));
 
     $apiEngine->success();
@@ -62,9 +67,13 @@ switch($_GET['r']){
   // SETUP OPS //
   case '10': // initial setup //
     if(empty($_POST) || empty($_POST['target_id'])) die($apiEngine->buildError('5', 'no_target_id'));
+
     if(empty($_POST['device_label'])) die($apiEngine->buildError('5', 'no_device_label'));
+
     if(empty($_POST['avail_configs'])) die($apiEngine->buildError('5', 'no_configs'));
+
     $res = $apiEngine->storeNewDevice($ownerId, $_POST['target_id'], $_POST['device_label'], $_POST['avail_configs']);
+    
     if(!$res) die($apiEngine->buildError('666', 'unknown_error'));
 
     $apiEngine->success();

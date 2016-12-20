@@ -19,6 +19,20 @@ class sqlEngineClass{
       'paramTypes' => 'i'
     ];
 
+    protected $getUserMetaQuery = [
+      'sql' => "SELECT `first_name`, `last_name`, `business_name`, `email`, `avatar`, `max_devices`, `device_labels`
+                FROM `client_meta`
+                WHERE `client_meta`.`client_id` = ? LIMIT 1",
+      'paramTypes' => 'i'
+    ];
+
+    protected $getUserByIdQuery = [
+      'sql' => "SELECT `clients`.`id`, `app_key`, `first_name`, `last_name`, `business_name`, `email`, `avatar`, `max_devices`, `device_labels`
+                FROM `clients` LEFT JOIN `client_meta` ON `clients`.`id` = `client_meta`.`id`
+                WHERE `clients`.`id` = ? LIMIT 1",
+      'paramTypes' => 'i'
+    ];
+
     protected $getUserByHashQuery = [
       'sql' => "SELECT `clients`.`id`, `app_key`, `first_name`, `last_name`, `business_name`, `email`, `avatar`, `max_devices`, `device_labels`
                 FROM `clients` LEFT JOIN `client_meta` ON `clients`.`id` = `client_meta`.`id`
@@ -27,7 +41,7 @@ class sqlEngineClass{
     ];
 
     protected $getClientDevicesQuery = [
-      'sql' => "SELECT `id`, `target_id`, `device_label`, `avail_configs`
+      'sql' => "SELECT `id`, `target_id`, `device_label`, `avail_configs`, `last_checkin`
                 FROM `client_devices`
                 WHERE `owner_id` = ?",
       'paramTypes' => 'i'
@@ -93,6 +107,35 @@ class sqlEngineClass{
       'paramTypes' => 'i'
     ];
 
+    protected $storeNewUser = [
+      'sql' => "INSERT INTO `clients` (`id`, `auth_hash`, `app_key`)
+                VALUES (NULL, ?, ?)",
+      'paramTypes' => 'ss'
+    ];
+
+    protected $storeNewUserMeta = [
+      'sql' => "INSERT INTO `client_meta` (`id`, `client_id`, `first_name`, `last_name`, `business_name`, `email`, `avatar`, `max_devices`, `device_labels`)
+                VALUES (NULL, ?, ?, ?, ?, ?, '', '5', '{\"0\":\"main\"}');",
+      'paramTypes' => 'issss'
+    ];
+
+    protected $storeUserMeta = [
+      'sql' => "UPDATE `client_meta`
+                SET `first_name` = ?,
+                    `last_name` = ?,
+                    `business_name` = ?,
+                    `email` = ?
+                WHERE `client_meta`.`client_id` = ?;",
+      'paramTypes' => 'ssssi'
+    ];
+
+    protected $storeDeviceCheckin = [
+      'sql' => "UPDATE `client_devices`
+                SET `last_checkin` = NOW()
+                WHERE `owner_id` = ?",
+      'paramTypes' => 'i'
+    ];
+
     protected function connect(){
         $this->sql = new mysqli(
             $this->serverPath,
@@ -114,7 +157,7 @@ class sqlEngineClass{
         $this->sql->close();
     }
 
-    protected function runSql($query, $input){
+    protected function runSql($query, $input, $getLID = false){
       if (!$this->connected) $this->connect();
 
       $state = $this->sql->stmt_init();
@@ -133,6 +176,10 @@ class sqlEngineClass{
       }
 
       if(!$state->execute()) die('Could not execute sql');
+
+      if($getLID){
+        return $state->insert_id;
+      }
 
       $state->store_result();
 
@@ -161,6 +208,71 @@ class sqlEngineClass{
       return $returnArray;
     }
 
+    public function storeNewUser($user, $authHash, $firstName, $lastName, $bizName, $email, $appKey, $maxDevices, $deviceLabels){
+      $newId = $this->runSql(
+        $this->storeNewUser,
+        [
+          'authHash' => $authHash,
+          'appKey' => $appKey,
+        ],
+        true
+      );
+      
+      return $this->updateUserMeta($newId, $firstName, $lastName, $bizName, $email, $maxDevices, $deviceLabels);
+    }
+
+    public function updateUserMeta($cId, $fName, $lName, $bName, $email, $maxDevs, $devLbls){
+      $userExists = (empty($this->getUserMeta($cId)['email']) ? false : true);
+
+      if($userExists){
+        $results = $this->runSql(
+          $this->storeUserMeta,
+          [
+            'firstName' => $fName,
+            'lastName' => $lName,
+            'bizName' => $bName,
+            'email' => $email,
+            'clientId' => $cId,
+          ]
+        );
+      }else{
+        $results = $this->runSql(
+          $this->storeNewUserMeta,
+          [
+            'clientId' => $cId,
+            'firstName' => $fName,
+            'lastName' => $lName,
+            'bizName' => $bName,
+            'email' => $email,
+          ]
+        );
+      }
+
+      return true;
+    }
+
+    public function getUserMeta($cid){
+      $results = $this->runSql(
+        $this->getUserMetaQuery,
+        ['clientId' => $cid]
+      );
+
+      if(!count($results)) return false;
+
+      return $results[0];
+    }
+
+    public function getUserById($cid){
+      $results = $this->runSql(
+        $this->getUserByIdQuery,
+        ['clientId' => $cid]
+      );
+
+      if(!count($results)) return false;
+
+      return $results[0];
+    }
+
     public function getUserByHash($hash){
       $results = $this->runSql(
         $this->getUserByHashQuery,
@@ -181,6 +293,15 @@ class sqlEngineClass{
       if(!count($results)) return false;
 
       return $results;
+    }
+
+    public function storeDeviceCheckin($cid){
+      $results = $this->runSql(
+        $this->storeDeviceCheckin,
+        ['ownerId' => $cid]
+      );
+
+      return true;
     }
 
     public function getClientJobs($cid){
