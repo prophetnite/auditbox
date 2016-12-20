@@ -69,6 +69,9 @@ class apiEngineClass{
     return $this->sqlEngine->storeNewDevice($ownerId, $targetId, $deviceLabel, $availConfigs);
   }
 
+  public function storeDeviceCheckin($ownerId){
+    return $this->sqlEngine->storeDeviceCheckin($ownerId);
+  }
 }
 
 ?>
