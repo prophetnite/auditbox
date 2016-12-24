@@ -218,8 +218,10 @@ class sqlEngineClass{
         ],
         true
       );
-      
-      return $this->updateUserMeta($newId, $firstName, $lastName, $bizName, $email, $maxDevices, $deviceLabels);
+
+      $this->updateUserMeta($newId, $firstName, $lastName, $bizName, $email, $maxDevices, $deviceLabels);
+
+      return $newId;
     }
 
     public function updateUserMeta($cId, $fName, $lName, $bName, $email, $maxDevs, $devLbls){
