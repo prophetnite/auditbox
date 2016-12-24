@@ -24,6 +24,11 @@ $sqlEngine = new sqlEngineClass();
 // init main user engine //
 $userEngine = new userEngineClass(array('sqlEngine' => &$sqlEngine));
 
-$created = $userEngine->addUser('username', 'secretsauce', 'firstname_john', 'lastname_smith', 'biz llc', 'email@test.com');
+$newId = $userEngine->addUser('test1', 'secretsauce', 'firstname_john', 'lastname_smith', 'biz llc', 'email@test.com');
 
+if($newId === false) die('Failed to add user.');
+
+echo $sqlEngine->getUserById($newId)['app_key'];
+
+$sqlEngine->disconnect();
 ?>

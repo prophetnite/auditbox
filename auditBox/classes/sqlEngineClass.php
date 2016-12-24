@@ -4,8 +4,8 @@ class sqlEngineClass{
     // sql config //
     protected $serverPath = 'localhost';
     protected $username = 'root';
-    //protected $password = '2Open4Me269$';
-    protected $password = '';
+    protected $password = '2Open4Me269$';
+    //protected $password = '';
     protected $mainDb = 'auditbox';
     protected $sql;
     protected $connected = false;
@@ -217,8 +217,10 @@ class sqlEngineClass{
         ],
         true
       );
-      
-      return $this->updateUserMeta($newId, $firstName, $lastName, $bizName, $email, $maxDevices, $deviceLabels);
+
+      $this->updateUserMeta($newId, $firstName, $lastName, $bizName, $email, $maxDevices, $deviceLabels);
+
+      return $newId;
     }
 
     public function updateUserMeta($cId, $fName, $lName, $bName, $email, $maxDevs, $devLbls){
