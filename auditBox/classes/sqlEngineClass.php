@@ -3,9 +3,10 @@
 class sqlEngineClass{
     // sql config //
     protected $serverPath = 'localhost';
-    protected $username = 'root';
-    protected $password = '2Open4Me269$';
+    //protected $username = 'root';
     //protected $password = '';
+    protected $username = 'auditbox';
+    protected $password = 'KnAHb5NU8tqzKJ4z';
     protected $mainDb = 'auditbox';
     protected $sql;
     protected $connected = false;
